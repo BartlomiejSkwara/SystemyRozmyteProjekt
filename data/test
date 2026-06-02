@@ -1,0 +1,14 @@
+Date,Time,
+2017/12/22,11:35:08,
+
+
+S1_Temp,S2_Temp,S3_Temp,S4_Temp,
+25.44,25.44,24.88,25.75,
+
+S1_Light,S2_Light,S3_Light,S4_Light,S1_Sound,S2_Sound,S3_Sound,S4_Sound,S5_CO2,S5_CO2_Slope,S6_PIR,S7_PIR,Room_Occupancy_Count
+
+157,240,70,54,
+
+
+
+0.47,0.25,0.14,0.11,450,0.311538461538,1,0,2

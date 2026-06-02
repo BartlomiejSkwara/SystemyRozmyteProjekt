@@ -5,7 +5,7 @@ from imblearn.under_sampling import RandomUnderSampler
 
 
 class OccupancyFuzzyClassifier:
-    def __init__(self, data_path="data/Occupancy_Estimation.csv", under_sample_size=600):
+    def __init__(self, data_path="data/Occupancy_Estimation.csv", under_sample_size=600,spread=0.05):
         # Load and prepare data
         self.df = pd.read_csv(data_path)
         self.target_name = "Room_Occupancy_Count"
@@ -13,7 +13,7 @@ class OccupancyFuzzyClassifier:
 
         self.df = self._under_sample(under_sample_size)
 
-        self._build_fuzzy_system()
+        self._build_fuzzy_system(spread)
 
     def _under_sample(self, size):
         target_name = self.target_name
@@ -26,7 +26,7 @@ class OccupancyFuzzyClassifier:
         X_res, y_res = rus.fit_resample(X, y)
         return pd.concat([X_res, y_res], axis=1)
 
-    def _build_fuzzy_system(self):
+    def _build_fuzzy_system(self,spread):
         self.data_groups = {}
         self.class_names = sorted(self.df[self.target_name].value_counts().index.tolist())
         for c in self.class_names:
@@ -51,7 +51,6 @@ class OccupancyFuzzyClassifier:
             )
 
         output_sets = []
-        spread = 0.05
         for c_name in self.class_names:
             singleton = sf.FuzzySet(
                 points=[[c_name - spread, 0], [c_name, 1], [c_name + spread, 0]],

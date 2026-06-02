@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+from OccupancyFuzzyClassifier import OccupancyFuzzyClassifier
+
 st.set_page_config(
     page_title="Klasyfikator zajęcia pokoju",
     layout="centered",
@@ -24,6 +26,11 @@ st.markdown(hide_deploy_style, unsafe_allow_html=True)
 st.title("Klasyfikator liczby mieszkańców pokoju")
 st.markdown("Podaj odczyty sensorów:")
 
+@st.cache_resource
+def load_classifier():
+    return OccupancyFuzzyClassifier(data_path="data/Occupancy_Estimation.csv",under_sample_size=600,spread=0.6)
+
+
 @st.dialog("Liczba mieszkańców")
 def show_prediction(predicted_people):
     st.markdown(f"### Estymowana liczba mieszkańców:")
@@ -33,12 +40,6 @@ def show_prediction(predicted_people):
         st.rerun()
 
 with st.form("occupancy_form"):
-    st.subheader("📅 Data i Godzina")
-    col1, col2 = st.columns(2)
-    with col1:
-        date = st.date_input("Data", datetime.now().date())
-    with col2:
-        time = st.time_input("Godzina", datetime.now().time())
 
     st.subheader("🌡️ Temperatura (°C)")
     col1, col2 = st.columns(2)
@@ -52,23 +53,27 @@ with st.form("occupancy_form"):
     st.subheader("💡 Światło (lux)")
     col1, col2 = st.columns(2)
     with col1:
-        s1_light = st.number_input("S1 Światło", value=0.0, step=0.1, format="%.2f")
-        s3_light = st.number_input("S3 Światło", value=0.0, step=0.1, format="%.2f")
+        s1_light = st.number_input("S1 Światło", value=0.0, step=1.0, format="%.1f")
+        s3_light = st.number_input("S3 Światło", value=0.0, step=1.0, format="%.1f")
     with col2:
-        s2_light = st.number_input("S2 Światło", value=0.0, step=0.1, format="%.2f")
-        s4_light = st.number_input("S4 Światło", value=0.0, step=0.1, format="%.2f")
+        s2_light = st.number_input("S2 Światło", value=0.0, step=1.0, format="%.1f")
+        s4_light = st.number_input("S4 Światło", value=0.0, step=1.0, format="%.1f")
 
     st.subheader("🔊 Dźwięk (voltage, V)")
     col1, col2 = st.columns(2)
     with col1:
-        s1_sound = st.number_input("S1 Dźwięk", value=0.0, step=0.1, format="%.4f")
-        s3_sound = st.number_input("S3 Dźwięk", value=0.0, step=0.1, format="%.4f")
+        s1_sound = st.number_input("S1 Dźwięk", value=0.0, step=0.1, format="%.2f")
+        s3_sound = st.number_input("S3 Dźwięk", value=0.0, step=0.1, format="%.2f")
     with col2:
-        s2_sound = st.number_input("S2 Dźwięk", value=0.0, step=0.1, format="%.4f")
-        s4_sound = st.number_input("S4 Dźwięk", value=0.0, step=0.1, format="%.4f")
+        s2_sound = st.number_input("S2 Dźwięk", value=0.0, step=0.1, format="%.2f")
+        s4_sound = st.number_input("S4 Dźwięk", value=0.0, step=0.1, format="%.2f")
 
-    st.subheader("🌫️ CO₂ (ppm)")
-    s5_co2 = st.number_input("CO₂ (S5)", value=400.0, step=0.1, format="%.1f")
+    st.subheader("🌫️ CO₂")
+    col1, col2 = st.columns(2)
+    with col1:
+        s5_co2 = st.number_input("CO₂ (ppm)", value=400.0, step=0.1, format="%.1f")
+    with col2:
+        s5_co2_slope = st.number_input("CO₂ Slope (ppm per unit time)", value=0.0, step=0.1, format="%.2f")
 
     st.subheader("👤 PIR Ruch")
     col1, col2 = st.columns(2)
@@ -80,7 +85,29 @@ with st.form("occupancy_form"):
     submitted = st.form_submit_button("🔍 Predykcja")
 
 if submitted:
-    # Placeholder prediction
-    predicted_people = 3
-    # Call the modal dialog function
-    show_prediction(predicted_people)
+    input_data = pd.DataFrame([{
+        'S1_Temp': s1_temp,
+        'S2_Temp': s2_temp,
+        'S3_Temp': s3_temp,
+        'S4_Temp': s4_temp,
+        'S1_Light': s1_light,
+        'S2_Light': s2_light,
+        'S3_Light': s3_light,
+        'S4_Light': s4_light,
+        'S1_Sound': s1_sound,
+        'S2_Sound': s2_sound,
+        'S3_Sound': s3_sound,
+        'S4_Sound': s4_sound,
+        'S5_CO2': s5_co2,
+        'S5_CO2_Slope': s5_co2_slope,
+        'S6_PIR': s6_pir,
+        'S7_PIR': s7_pir
+    }])
+
+    print(input_data)
+    # Load the classifier (cached)
+    classifier = load_classifier()
+    # Predict
+    prediction = classifier.predict(input_data)[0]  # returns a list, take first element
+    # Show result in modal
+    show_prediction(prediction)
