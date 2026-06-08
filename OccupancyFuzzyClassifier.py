@@ -1,19 +1,39 @@
 import pandas as pd
 import simpful as sf
-from simpful import Gaussian_MF
+from simpful import Gaussian_MF, Triangular_MF, Trapezoidal_MF
 from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import train_test_split
 
 
 class OccupancyFuzzyClassifier:
-    def __init__(self, data_path="data/Occupancy_Estimation.csv", under_sample_size=600,spread=0.05):
+    def __init__(self, split = False, under_sample_size=600,spread=0.05,function="GAU"):
         # Load and prepare data
+        self.function = function
+        self._prep_data(under_sample_size=under_sample_size,split = split)
+        self._build_fuzzy_system(spread)
+        
+        
+
+
+
+    def _prep_data(self,data_path="data/Occupancy_Estimation.csv",under_sample_size=600,split=False):
         self.df = pd.read_csv(data_path)
         self.target_name = "Room_Occupancy_Count"
         self.df = self.df.drop(columns=["Date", "Time"])
-
         self.df = self._under_sample(under_sample_size)
 
-        self._build_fuzzy_system(spread)
+        if split:
+            X = self.df.drop(columns=[self.target_name])
+            y = self.df[self.target_name]
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+                X,
+                y,
+                test_size=0.3,
+                random_state=42,
+                shuffle=True
+            )
+            self.df = pd.concat([self.X_train, self.y_train], axis=1)
+
 
     def _under_sample(self, size):
         target_name = self.target_name
@@ -34,17 +54,32 @@ class OccupancyFuzzyClassifier:
 
         self.feature_names = [col for col in self.df.columns if col != self.target_name]
 
-        self.FS = sf.FuzzySystem(operators=['AND_PRODUCT'])
+        self.FS = sf.FuzzySystem(operators=['AND_PRODUCT'],show_banner=False)
 
         for feature in self.feature_names:
             fuzzy_sets_for_feature = {}
             for c_name in self.class_names:
                 avg = self.data_groups[c_name][feature].mean()
                 std = max(self.data_groups[c_name][feature].std(), 1e-6)
-                fuzzy_sets_for_feature[c_name] = sf.FuzzySet(
-                    function=Gaussian_MF(mu=avg, sigma=std),
-                    term=f"{c_name}_{feature}"
-                )
+
+                sets = 0
+                if self.function == "GAU":
+                    sets = sf.FuzzySet(
+                        function=Gaussian_MF(mu=avg, sigma=std),
+                        term=f"{c_name}_{feature}"
+                    )
+                if self.function == "TRI":
+                    sets = sf.FuzzySet(
+                        function=sf.Triangular_MF(a=avg-std*3, b=avg, c=avg+std*3),
+                        term=f"{c_name}_{feature}"
+                    )
+                if self.function == "TRA":
+                    sets =  sf.FuzzySet(
+                        function=sf.Trapezoidal_MF(a=avg-3*std, b=avg-std, c=avg+std, d=avg+3*std),
+                        term=f"{c_name}_{feature}"
+                    )
+
+                fuzzy_sets_for_feature[c_name]  = sets
             self.FS.add_linguistic_variable(
                 feature,
                 sf.LinguisticVariable(list(fuzzy_sets_for_feature.values()))

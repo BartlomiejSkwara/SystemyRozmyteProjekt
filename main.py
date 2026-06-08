@@ -23,20 +23,18 @@ hide_deploy_style = """
 """
 st.markdown(hide_deploy_style, unsafe_allow_html=True)
 
-st.title("Klasyfikator liczby mieszkańców pokoju")
-st.markdown("Podaj odczyty sensorów:")
+st.title("Klasyfikator zajęcia pokoju")
+st.markdown("#### Podaj odczyty sensorów:")
 
 @st.cache_resource
 def load_classifier():
     return OccupancyFuzzyClassifier(data_path="data/Occupancy_Estimation.csv",under_sample_size=600,spread=0.6)
 
 
-@st.dialog("Liczba mieszkańców")
+@st.dialog("Estymowana liczba mieszkańców:")
 def show_prediction(predicted_people):
-    st.markdown(f"### Estymowana liczba mieszkańców:")
     st.markdown(f"# **{predicted_people}**")
-    st.markdown("Lorem Ipsum Dolor")
-    if st.button("Close"):
+    if st.button("Powrót"):
         st.rerun()
 
 with st.form("occupancy_form"):
@@ -73,7 +71,7 @@ with st.form("occupancy_form"):
     with col1:
         s5_co2 = st.number_input("CO₂ (ppm)", value=400.0, step=0.1, format="%.1f")
     with col2:
-        s5_co2_slope = st.number_input("CO₂ Slope (ppm per unit time)", value=0.0, step=0.1, format="%.2f")
+        s5_co2_slope = st.number_input("CO₂ Slope (ppm/jednostka czasu)", value=0.0, step=0.1, format="%.2f")
 
     st.subheader("👤 PIR Ruch")
     col1, col2 = st.columns(2)
@@ -82,7 +80,10 @@ with st.form("occupancy_form"):
     with col2:
         s7_pir = st.selectbox("PIR Sensor 7", options=[0, 1], format_func=lambda x: "Ruch" if x else "Brak Ruchu")
 
-    submitted = st.form_submit_button("🔍 Predykcja")
+    col1, col2, col3 = st.columns(3)
+
+    with col2:
+        submitted = st.form_submit_button("Generuj wynik")
 
 if submitted:
     input_data = pd.DataFrame([{
@@ -104,7 +105,7 @@ if submitted:
         'S7_PIR': s7_pir
     }])
 
-    print(input_data)
+    # print(input_data)
     # Load the classifier (cached)
     classifier = load_classifier()
     # Predict
